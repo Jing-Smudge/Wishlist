@@ -362,36 +362,7 @@ namespace Wishlist
             TableStorageContext storage = new TableStorageContext();
             
 
-            var favorates = await storage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.IsFavorate==true);
-            
-            Dictionary<string,int> favorateDict = new Dictionary<string, int>();
-
-            foreach( var i in favorates)
-            {
-                if(!favorateDict.ContainsKey(i.PartitionKey))
-                {
-                    favorateDict.Add(i.PartitionKey,0);
-                }
-                favorateDict[i.PartitionKey] += 1;
-            }
-
-            var products = await storage.GetAllEntitiesAsync<ProductEntity>(WC.ProdcutTable);
-
-            foreach(string key in favorateDict.Keys)
-            {
-                if(favorateDict[key]<products.FirstOrDefault(ent=>ent.RowKey==key).Quantity)
-                {
-                    favorateDict.Remove(key);
-                }
-            }
-
-
-
-
-
-
-
-
+            var favorates = await storage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.IsFavorate==true);                      
             List<LowStockDto> dtoList = new List<LowStockDto>();
             
             foreach( var ent in favorates)
@@ -409,24 +380,7 @@ namespace Wishlist
                 dto.FavorateNumber +=1;
                 dto.Quantity=product.Quantity;
             }
-
-            foreach( var i in dtoList)
-            {
-                
-                System.Console.WriteLine(dtoList.ToString());
-
-            }
-
-
-
-
-
-
-
-
-
-
-
+            var lowStockList = dtoList.Where(dto=>dto.FavorateNumber>=dto.Quantity);
 
             return new OkObjectResult(dtoList);
         }
