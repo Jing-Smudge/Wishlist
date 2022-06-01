@@ -19,19 +19,24 @@ using Wishlist.Models.Dtos;
 
 namespace Wishlist
 {
-    public static class AzureFunction
+    public class AzureFunction
     {
-       
+       private  readonly BlobStorageContext blobStorage;
+       private readonly TableStorageContext tableStorage;
 
-      
+      public AzureFunction(BlobStorageContext _blobStorage,TableStorageContext _tableStorage)
+      {
+          blobStorage=_blobStorage;
+          tableStorage = _tableStorage;
+      }
+
 
         [FunctionName("UploadFile")]
-        public static async Task<IActionResult> UploadFile(
+        public async Task<IActionResult> UploadFile(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
             string id = req.Query["productId"];
-            BlobStorageContext blobStorage = new BlobStorageContext();
             var file = req.Form.Files[0];
             
             string blobName = await GetBlobNameAsync(id);
@@ -47,9 +52,8 @@ namespace Wishlist
         }
 
 
-        private static async Task<string> GetBlobNameAsync(string id)
+        private async Task<string> GetBlobNameAsync(string id)
         {
-            TableStorageContext tableStorage = new TableStorageContext();
             ProductEntity product = await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,id);
             if(product is null)
             {
@@ -61,15 +65,12 @@ namespace Wishlist
 
 
 
-
-
         [FunctionName("Download")]
-        public static async Task<IActionResult> Download(
+        public async Task<IActionResult> Download(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
         {
             string id = req.Query["productId"];
-            BlobStorageContext blobStorage = new BlobStorageContext();
 
             string blobName = await GetBlobNameAsync(id);
             if(blobName is null)
@@ -96,15 +97,14 @@ namespace Wishlist
 
 
         [FunctionName("GetProduct")]
-        public static async Task<IActionResult> GetProduct(
+        public async Task<IActionResult> GetProduct(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
         {
             string id = req.Query["productId"];
-            TableStorageContext storage = new TableStorageContext();
             ProductEntity entity;
            try{
-              entity =  await storage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,id);
+              entity =  await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,id);
            }    
            catch(Exception ex)
            {
@@ -122,14 +122,13 @@ namespace Wishlist
 
         
         [FunctionName("GetAllProducts")]
-        public static async Task<IActionResult> GetAllProducts(
+        public async Task<IActionResult> GetAllProducts(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
         {
-            TableStorageContext storage = new TableStorageContext();
             List<ProductEntity> entities = new List<ProductEntity>();
            try{
-              entities =  await storage.GetAllEntitiesAsync<ProductEntity>(WC.ProdcutTable);
+              entities =  await tableStorage.GetAllEntitiesAsync<ProductEntity>(WC.ProdcutTable);
            }    
            catch(Exception ex)
            {
@@ -143,7 +142,7 @@ namespace Wishlist
 
 
         [FunctionName("CreateProduct")]
-        public static async Task<IActionResult> CreateProduct(
+        public  async Task<IActionResult> CreateProduct(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
@@ -152,9 +151,8 @@ namespace Wishlist
             dynamic data = JsonConvert.DeserializeObject<Product>(requestBody);
             data.Id=Guid.NewGuid().ToString();
         
-            TableStorageContext storage = new TableStorageContext();
            try{
-               await storage.AddEntityAsync(WC.ProdcutTable, data);
+               await tableStorage.AddEntityAsync(WC.ProdcutTable, data);
            }    
            catch(Exception ex)
            {
@@ -167,15 +165,14 @@ namespace Wishlist
 
         
          [FunctionName("DeleteProduct")]
-        public static async Task<IActionResult> DeleteProduct(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
+        public async Task<IActionResult> DeleteProduct(
+            [HttpTrigger(AuthorizationLevel.Function, "delete", Route = null)] HttpRequest req,
             ILogger log)
         {
             string id = req.Query["productId"];
-            TableStorageContext storage = new TableStorageContext();
             ProductEntity entity;
            try{
-              entity =  await storage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,id);
+              entity =  await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,id);
            }    
            catch(Exception ex)
            {
@@ -187,22 +184,21 @@ namespace Wishlist
                return new NotFoundResult();
            }
 
-            await storage.DeleteEntityAsync<ProductEntity>(WC.ProdcutTable,entity);
+            await tableStorage.DeleteEntityAsync<ProductEntity>(WC.ProdcutTable,entity);
             return new OkResult();
         }
         
 
         [FunctionName("UpdateProduct")]
-        public static async Task<IActionResult> UpdateProduct(
-            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
+        public  async Task<IActionResult> UpdateProduct(
+            [HttpTrigger(AuthorizationLevel.Function, "put", Route = null)] HttpRequest req,
             ILogger log)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject<Product>(requestBody);
             
-            TableStorageContext storage = new TableStorageContext();
            try{
-               await storage.UpdateEntityAsync<ProductEntity>(WC.ProdcutTable, data);
+               await tableStorage.UpdateEntityAsync<ProductEntity>(WC.ProdcutTable, data);
            }    
            catch(Exception ex)
            {
@@ -220,7 +216,7 @@ namespace Wishlist
 
 
         [FunctionName("CreateUser")]
-        public static async Task<IActionResult> CreateUser(
+        public  async Task<IActionResult> CreateUser(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
@@ -229,9 +225,8 @@ namespace Wishlist
             dynamic data = JsonConvert.DeserializeObject<User>(requestBody);
             data.Id=Guid.NewGuid().ToString();
         
-            TableStorageContext storage = new TableStorageContext();
            try{
-               await storage.AddEntityAsync(WC.UserTable, data);
+               await tableStorage.AddEntityAsync(WC.UserTable, data);
            }    
            catch(Exception ex)
            {
@@ -247,15 +242,14 @@ namespace Wishlist
 
 
         [FunctionName("GetList")]
-        public static async Task<IActionResult> GetList(
+        public  async Task<IActionResult> GetList(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
         {
             string id = req.Query["userId"];
-            TableStorageContext storage = new TableStorageContext();
             
            
-          var entities =  await storage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.CustomerId==id);
+          var entities =  await tableStorage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.CustomerId==id);
           List<WishItem> items = default;
           if(entities.Count()>0)
           {
@@ -270,7 +264,7 @@ namespace Wishlist
 
 
         [FunctionName("AddToList")]
-        public static async Task<IActionResult> AddToList(
+        public async Task<IActionResult> AddToList(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
             ILogger log)
         {
@@ -279,15 +273,14 @@ namespace Wishlist
             dynamic data = JsonConvert.DeserializeObject<WishItem>(requestBody);
             data.Id=Guid.NewGuid().ToString();
         
-            TableStorageContext storage = new TableStorageContext();
-            UserEntity user = await storage.GetEntityByKeyAsync<UserEntity>(WC.UserTable,data.CustomerId);
-            ProductEntity product = await storage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,data.ProductId);
+            UserEntity user = await tableStorage.GetEntityByKeyAsync<UserEntity>(WC.UserTable,data.CustomerId);
+            ProductEntity product = await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,data.ProductId);
             if(product is null || user is null)
             {
                 return new NotFoundResult();
             }
            try{
-               await storage.AddEntityAsync(WC.ItemTable, data);
+               await tableStorage.AddEntityAsync(WC.ItemTable, data);
            }    
            catch(Exception ex)
            {
@@ -300,15 +293,14 @@ namespace Wishlist
 
 
          [FunctionName("DeleteFromList")]
-        public static async Task<IActionResult> DeleteFromList(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
+        public  async Task<IActionResult> DeleteFromList(
+            [HttpTrigger(AuthorizationLevel.Function, "delete", Route = null)] HttpRequest req,
             ILogger log)
         {
             string id = req.Query["itemId"];
-            TableStorageContext storage = new TableStorageContext();
             ItemEntity entity;
            try{
-              entity =  await storage.GetEntityByKeyAsync<ItemEntity>(WC.ItemTable,id);
+              entity =  await tableStorage.GetEntityByKeyAsync<ItemEntity>(WC.ItemTable,id);
            }    
            catch(Exception ex)
            {
@@ -320,21 +312,20 @@ namespace Wishlist
                return new NotFoundResult();
            }
 
-            await storage.DeleteEntityAsync<ItemEntity>(WC.ItemTable,entity);
+            await tableStorage.DeleteEntityAsync<ItemEntity>(WC.ItemTable,entity);
             return new OkResult();
         }
 
 
         [FunctionName("TogFavorate")]
-        public static async Task<IActionResult> TogFavorate(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
+        public async Task<IActionResult> TogFavorate(
+            [HttpTrigger(AuthorizationLevel.Function, "put", Route = null)] HttpRequest req,
             ILogger log)
         {
             string id = req.Query["itemId"];
-            TableStorageContext storage = new TableStorageContext();
             ItemEntity entity;
            try{
-              entity =  await storage.GetEntityByKeyAsync<ItemEntity>(WC.ItemTable,id);
+              entity =  await  tableStorage.GetEntityByKeyAsync<ItemEntity>(WC.ItemTable,id);
            }    
            catch(Exception ex)
            {
@@ -347,7 +338,7 @@ namespace Wishlist
            }
             WishItem item = entity.MapEntityToModel();
             item.IsFavorate = !item.IsFavorate;
-            await storage.UpdateEntityAsync<ItemEntity>(WC.ItemTable,item);
+            await tableStorage.UpdateEntityAsync<ItemEntity>(WC.ItemTable,item);
             return new OkResult();
         }
 
@@ -355,14 +346,12 @@ namespace Wishlist
 
 
         [FunctionName("GetLowStock")]
-        public static async Task<IActionResult> GetLowStock(
+        public  async Task<IActionResult> GetLowStock(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
-        {
-            TableStorageContext storage = new TableStorageContext();
-            
+        {            
 
-            var favorates = await storage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.IsFavorate==true);                      
+            var favorates = await tableStorage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.IsFavorate==true);                      
             List<LowStockDto> dtoList = new List<LowStockDto>();
             
             foreach( var ent in favorates)
@@ -376,7 +365,7 @@ namespace Wishlist
                     };
                     dtoList.Add(dto);
                 }
-                ProductEntity product = await storage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,ent.PartitionKey);
+                ProductEntity product = await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,ent.PartitionKey);
                 dto.FavorateNumber +=1;
                 dto.Quantity=product.Quantity;
             }
