@@ -7,7 +7,6 @@ namespace Wishlist.Models.Entities
         public int Quantity { get; set; }
         public double Price { get; set; }
         public string ProductName { get; set; }
-
         public Product MapEntityToModel()
         {
             Product product = new Product();

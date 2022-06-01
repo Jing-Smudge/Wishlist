@@ -14,13 +14,11 @@ namespace Wishlist
 {
     public class TableStorageContext
     {
-        private const string connStr = @"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;TableEndpoint=http://127.0.0.1:10002/devstoreaccount1;";
-
         public TableServiceClient serviceClient;
         
-
         public TableStorageContext()
         {
+            string connStr =  Environment.GetEnvironmentVariable("connStr");
             serviceClient = new TableServiceClient(connStr);
         }
 
@@ -28,12 +26,9 @@ namespace Wishlist
         public async Task<TableClient> GetTableClientAsync(string tableName)
         {
            await serviceClient.CreateTableIfNotExistsAsync(tableName);
-           
            return serviceClient.GetTableClient(tableName);
         }
 
-    
-      
 
 
         public async Task DeleteFromTable<T>(string tableName,TableEntity entity)
@@ -52,16 +47,13 @@ namespace Wishlist
 
 
 
-
         public async Task<T> GetEntityByKeyAsync<T>(string tableName, string rowKey) where T:AppEntity,new()
         {
             TableClient client = await this.GetTableClientAsync(tableName);
             Pageable<T> result = client.Query<T>(ent=>ent.RowKey==rowKey);
             T entity = result.FirstOrDefault();
             return entity;
-        
         }
-
 
 
         public async Task<Pageable<T>> GetEntityByFilter<T>(string tableName,Expression<Func<T,bool>> filter)where T:AppEntity,new()
@@ -69,14 +61,13 @@ namespace Wishlist
             TableClient client = await this.GetTableClientAsync(tableName);
             Pageable<T> result =  client.Query<T>(filter);
             return result;
-
         }
+
 
         public async Task DeleteEntityAsync<T>(string tableName, T entity)where T:AppEntity,new()
         {
             TableClient client = await this.GetTableClientAsync(tableName);
             await client.DeleteEntityAsync(entity.PartitionKey,entity.RowKey);
-        
         }
 
 
@@ -86,8 +77,8 @@ namespace Wishlist
             TableClient client = await this.GetTableClientAsync(tableName);
             var entity = model.MapToEntity();
             await client.AddEntityAsync(entity);
-
         }
+
 
         public async Task UpdateEntityAsync<T>(string tableName,AppModel<T> model) where T:AppEntity,new()
         {
@@ -100,10 +91,5 @@ namespace Wishlist
             T mappedEntity = model.MapToEntity(entityFromTable);
             await client.UpsertEntityAsync<T>(mappedEntity);
         }
-
-
-
-
-
     }
 }

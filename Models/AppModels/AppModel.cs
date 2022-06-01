@@ -19,7 +19,5 @@ namespace Wishlist.Models.AppModels
             return this.MapProps(t);
         }
       abstract protected T MapProps(T entity);
-        
-        
     }
 }

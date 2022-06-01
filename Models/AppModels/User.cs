@@ -9,8 +9,6 @@ namespace Wishlist.Models.AppModels
     {
         public string Name { get; set; }
         public string Role { get; set; }
-        
-
         protected override UserEntity MapProps(UserEntity entity)
         {
             entity.PartitionKey= this.Role;

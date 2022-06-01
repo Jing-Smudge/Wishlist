@@ -8,7 +8,6 @@ namespace Wishlist.Models
 {
     public class ItemEntity : AppEntity
     {
-        
       public bool IsFavorate { get; set; }
       public string CustomerId { get; set; }
 
@@ -19,7 +18,6 @@ namespace Wishlist.Models
                 CustomerId = this.CustomerId,
                 ProductId=this.PartitionKey,
                 Id = this.RowKey
-
             };
             return item;
         }

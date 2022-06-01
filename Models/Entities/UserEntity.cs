@@ -8,9 +8,7 @@ namespace Wishlist.Models
 {
     public class UserEntity : AppEntity
     {
-       
       public string Name { get; set; }
-
        public User MapEntityToModel()
        {
          User customer = new User()
@@ -19,7 +17,6 @@ namespace Wishlist.Models
            Id=this.RowKey,
            Role=this.PartitionKey
          };
-
          return customer;
        }
     }

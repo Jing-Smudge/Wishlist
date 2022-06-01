@@ -8,7 +8,6 @@ namespace Wishlist.Models.AppModels
       public string CustomerId { get; set; }
       public string ProductId { get; set; }
       public bool IsFavorate { get; set; }
-
         protected override ItemEntity MapProps(ItemEntity entity)
         {
             entity.PartitionKey= this.ProductId;
@@ -18,6 +17,4 @@ namespace Wishlist.Models.AppModels
             return entity;
         }
     }
-
-    
 }

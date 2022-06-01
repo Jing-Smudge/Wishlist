@@ -39,28 +39,15 @@ namespace Wishlist
             string id = req.Query["productId"];
             var file = req.Form.Files[0];
             
-            string blobName = await GetBlobNameAsync(id);
+            string blobName = await blobStorage.GetBlobNameFromProductAsync(tableStorage,id);
             if(blobName is null)
             {
                 return new NotFoundResult();
             }
-
             using(var stream = file.OpenReadStream()){
                 await blobStorage.UploadStreamAsync(WC.ProdutBlog,blobName,stream);
             }
             return new OkResult();
-        }
-
-
-        private async Task<string> GetBlobNameAsync(string id)
-        {
-            ProductEntity product = await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,id);
-            if(product is null)
-            {
-                return null;
-            }
-            string blobName = $"{product.PartitionKey}-{product.RowKey}";
-            return blobName;
         }
 
 
@@ -71,30 +58,17 @@ namespace Wishlist
             ILogger log)
         {
             string id = req.Query["productId"];
-
-            string blobName = await GetBlobNameAsync(id);
+            string blobName = await blobStorage.GetBlobNameFromProductAsync(tableStorage, id);
             if(blobName is null)
             {
                 return new NotFoundResult();
             }
             var fileStream = await blobStorage.GetBlobStreamAsync(WC.ProdutBlog,blobName);
-
             MemoryStream ms = new MemoryStream();
             await fileStream.CopyToAsync(ms);
-
             return new FileContentResult(ms.ToArray(), "image/jpeg");
         }
         
-
-
-
-
-
-
-
-
-
-
 
         [FunctionName("GetProduct")]
         public async Task<IActionResult> GetProduct(
@@ -136,7 +110,6 @@ namespace Wishlist
                return new BadRequestResult();
            }
            var products = entities.Select(ent => ent.MapEntityToModel());
-            
             return new OkObjectResult(products);
         }
 
@@ -147,10 +120,8 @@ namespace Wishlist
             ILogger log)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
             dynamic data = JsonConvert.DeserializeObject<Product>(requestBody);
             data.Id=Guid.NewGuid().ToString();
-        
            try{
                await tableStorage.AddEntityAsync(WC.ProdcutTable, data);
            }    
@@ -159,7 +130,6 @@ namespace Wishlist
                log.LogError(ex,ex.ToString());
                return new BadRequestResult();
            }
-
             return new OkObjectResult(data);
         }
 
@@ -183,7 +153,6 @@ namespace Wishlist
            {
                return new NotFoundResult();
            }
-
             await tableStorage.DeleteEntityAsync<ProductEntity>(WC.ProdcutTable,entity);
             return new OkResult();
         }
@@ -196,7 +165,6 @@ namespace Wishlist
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject<Product>(requestBody);
-            
            try{
                await tableStorage.UpdateEntityAsync<ProductEntity>(WC.ProdcutTable, data);
            }    
@@ -205,14 +173,8 @@ namespace Wishlist
                log.LogError(ex,ex.ToString());
                return new NotFoundResult();
            }
-            
             return new OkObjectResult(data);
         }
-
-
-
-
-
 
 
         [FunctionName("CreateUser")]
@@ -224,7 +186,6 @@ namespace Wishlist
             
             dynamic data = JsonConvert.DeserializeObject<User>(requestBody);
             data.Id=Guid.NewGuid().ToString();
-        
            try{
                await tableStorage.AddEntityAsync(WC.UserTable, data);
            }    
@@ -233,12 +194,8 @@ namespace Wishlist
                log.LogError(ex,ex.ToString());
                return new BadRequestResult();
            }
-
             return new OkObjectResult(data);
         }
-
-
-
 
 
         [FunctionName("GetList")]
@@ -246,21 +203,15 @@ namespace Wishlist
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
         {
-            string id = req.Query["userId"];
-            
-           
+          string id = req.Query["userId"];
           var entities =  await tableStorage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.CustomerId==id);
           List<WishItem> items = default;
           if(entities.Count()>0)
           {
               items = entities.Select(ent => ent.MapEntityToModel()).ToList();
           }
-        
             return new OkObjectResult(items);
         }
-
-
-
 
 
         [FunctionName("AddToList")]
@@ -269,10 +220,8 @@ namespace Wishlist
             ILogger log)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
             dynamic data = JsonConvert.DeserializeObject<WishItem>(requestBody);
             data.Id=Guid.NewGuid().ToString();
-        
             UserEntity user = await tableStorage.GetEntityByKeyAsync<UserEntity>(WC.UserTable,data.CustomerId);
             ProductEntity product = await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,data.ProductId);
             if(product is null || user is null)
@@ -287,7 +236,6 @@ namespace Wishlist
                log.LogError(ex,ex.ToString());
                return new BadRequestResult();
            }
-
             return new OkObjectResult(data);
         }
 
@@ -311,7 +259,6 @@ namespace Wishlist
            {
                return new NotFoundResult();
            }
-
             await tableStorage.DeleteEntityAsync<ItemEntity>(WC.ItemTable,entity);
             return new OkResult();
         }
@@ -343,14 +290,11 @@ namespace Wishlist
         }
 
 
-
-
         [FunctionName("GetLowStock")]
         public  async Task<IActionResult> GetLowStock(
             [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
             ILogger log)
         {            
-
             var favorates = await tableStorage.GetEntityByFilter<ItemEntity>(WC.ItemTable,ent=>ent.IsFavorate==true);                      
             List<LowStockDto> dtoList = new List<LowStockDto>();
             
@@ -363,42 +307,14 @@ namespace Wishlist
                     {
                         ProductId=ent.PartitionKey,
                     };
+                    ProductEntity product = await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,ent.PartitionKey);
+                    dto.Quantity=product.Quantity;
                     dtoList.Add(dto);
                 }
-                ProductEntity product = await tableStorage.GetEntityByKeyAsync<ProductEntity>(WC.ProdcutTable,ent.PartitionKey);
                 dto.FavorateNumber +=1;
-                dto.Quantity=product.Quantity;
             }
-            var lowStockList = dtoList.Where(dto=>dto.FavorateNumber>=dto.Quantity);
-
+           // var lowStockList = dtoList.Where(dto=>dto.FavorateNumber>=dto.Quantity);
             return new OkObjectResult(dtoList);
         }
-
-
-
-
-
-
-
-
-
-
-
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
-
